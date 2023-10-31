@@ -1,0 +1,224 @@
+@import "node_modules/ol/ol.css";
+
+html, body {
+  margin: 0;
+  height: 100%;
+  /* COLORS */
+  --blue-dark-color: #1d3557;
+  --blue-shadow-color: #36607B;
+  --blue-mid-color: #457b9d;
+  --blue-bright-color: #71A2C1;
+  --green-dark-color: #1D582C;
+  --green-shadow-color: #367C3A;
+  --green-mid-color: #449C49;
+  --green-bright-color: #B6DCA7;
+  --red-dark-color: #591D1D;
+  --red-shadow-color: #7D3737;
+  --red-mid-color: #9C4444;
+  --red-bright-color: #DBA7A7;
+  --font-color: #f1faee;
+  background-color: #ffffff;
+  --correct-color: #46E637;
+  --incorrect-color: #E63946;
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 30vw;
+  max-width: 70vw;
+}
+
+h1 {
+  color: var(--font-color);
+  margin-top: 3rem;
+  margin-bottom: 4rem;
+}
+
+span {
+  color: var(--font-color);
+  font-size: large;
+  cursor: default;
+}
+
+label {
+  color: var(--font-color);
+  font-size: large;
+  cursor: default;
+}
+
+#sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 70vw;
+  left: 0;
+  height: 100%;
+  background-color: var(--blue-dark-color);
+  text-align: center;
+}
+
+.navigationBar {
+  overflow: hidden;
+  border-bottom: 0.2rem solid var(--blue-mid-color);
+  margin-bottom: 2rem;
+}
+
+.navigationBar span {
+  float: left;
+  color: var(--font-color);
+  text-align: center;
+  padding: 0.8rem 0;
+  width: 15vw;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.navigationBar span:hover {
+  background-color: var(--blue-bright-color);
+  color: var(--font-color);
+}
+
+.navigationBar span.active {
+  background-color: var(--blue-mid-color);
+  color: var(--font-color);
+  cursor: default;
+}
+
+.addressLabel {
+  display: inline-block;
+  color: var(--font-color);
+  width: 5rem;
+}
+
+.address {
+  display: inline-block;
+  background-color: var(--blue-mid-color);
+  color: var(--font-color);
+  font-size: x-large;
+  width: calc(27vw - 5rem);
+  padding: 0.8rem 0.5rem;
+  border-radius: 1rem;
+}
+
+#trueAddress {
+  margin-bottom: 1rem;
+}
+
+#guessedAddress {
+  margin-bottom: 3rem;
+}
+
+#difficultyForm {
+  margin: 0 1rem 2rem 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background-color: var(--blue-mid-color);
+}
+
+#difficultySlider {
+  width: 20vw;
+}
+
+.difficulty {
+  display: inline-block;
+  font-size: large;
+  color: var(--font-color);
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.menuButton {
+  display: inline-block;
+  padding: 15px 25px;
+  font-size: 24px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+  color: var(--font-color);
+  background-color: var(--blue-mid-color);
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 9px var(--blue-shadow-color);
+  margin-bottom: 2rem;
+}
+
+.menuButton:hover {
+  background-color: var(--blue-bright-color)
+}
+
+.menuButton:active {
+  background-color: var(--blue-mid-color);
+  box-shadow: 0 5px var(--blue-shadow-color);
+  transform: translateY(4px);
+}
+
+.menuButton:disabled {
+  color: var(--blue-dark-color);
+  background-color: var(--blue-bright-color);
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 9px var(--blue-shadow-color);
+}
+
+#play {
+  position: absolute;
+  bottom: 1rem;
+  left: 11vw;
+  width: 6rem;
+}
+
+.gameBegin {
+  color: var(--font-color);
+  background-color: var(--green-mid-color);
+  box-shadow: 0 9px var(--green-shadow-color);
+}
+
+.gameBegin:hover {
+  background-color: var(--green-bright-color)
+}
+
+.gameBegin:active {
+  background-color: var(--green-mid-color);
+  box-shadow: 0 5px var(--green-shadow-color);
+}
+
+.gameBegin:disabled {
+  color: var(--green-dark-color);
+  background-color: var(--green-bright-color);
+  box-shadow: 0 9px var(--green-shadow-color);
+}
+
+.gameEnd {
+  color: var(--font-color);
+  background-color: var(--red-mid-color);
+  box-shadow: 0 9px var(--red-shadow-color);
+}
+
+.gameEnd:hover {
+  background-color: var(--red-bright-color)
+}
+
+.gameEnd:active {
+  background-color: var(--red-mid-color);
+  box-shadow: 0 5px var(--red-shadow-color);
+}
+
+.gameEnd:disabled {
+  color: var(--red-dark-color);
+  background-color: var(--red-bright-color);
+  box-shadow: 0 9px var(--red-shadow-color);
+}
+
+#debug {
+  position: absolute;
+  top: 0;
+  bottom: 90vh;
+  left: 90vw;
+  right: 0;
+  background-color: white;
+  color: black;
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="https://openlayers.org/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Using OpenLayers with Vite</title>
+    <script type="module" src="./main.js"></script>
+  </head>
+  <body>
+    <div id="sidebar">
+      <h1>KnowYourNeighborhood</h1>
+      <div id="navBar" class="navigationBar">
+        <span class="active navItem">Game</span>
+        <span class="navItem">Settings</span>
+      </div>
+      <div id="pageSections">
+        <div id="settings" style="display: none;">
+          <h1>Colors</h1>
+          <label for="boundaryColor">Boundary:</label>
+          <input type="color" id="boundaryColor">
+          <br>
+          <label for="boundaryWidth">Boundary Width:</label>
+          <input id="boundaryWidth" type="range" min="1" max="5" value="3" step="1">
+          <span id="boundaryWidthValue"></span>
+          <br><br>
+          <label for="trueColor">True Street:</label>
+          <input type="color" id="trueColor">
+          <br><br>
+          <label for="hoverColor">Hovered Street:</label>
+          <input type="color" id="hoverColor">
+          <br>
+          <label for="borderOpacity">Border Opacity:</label>
+          <input id="borderOpacity" type="range" min="0" max="100" value="30" step="5">
+          <span id="borderOpacityValue"></span>
+        </div>
+        <div id="game">
+          <div id="boundaryDiv">
+            <div id="navBarShape" class="navigationBar">
+              <span class="active navItem">Editor</span>
+              <span class="navItem">Browse</span>
+            </div>
+            <div id="browse" style="display: none;">
+              <h1>Not implemented yet.</h1>
+            </div>
+            <div id="editor">
+              <label class="shapeTypeLabel" for="shapeType">Shape type:</label>
+              <select class="typeSelecter" id="shapeType">
+                <option value="Circle">Circle</option>
+                <option value="Box">Box</option>
+                <option value="Polygon">Polygon</option>
+              </select>
+              <br>
+              <button class="menuButton" id="undo">Undo</button>
+              <!-- <button class="menuButton" id="save">Save</button> -->
+            </div>
+          </div>
+          <div id="playDiv" style="display: none;">
+            <form id="difficultyForm">
+              <span class="difficulty">Possible Streets:</span><span id="difficultyText" class="difficulty"></span>
+              <br>
+              <input id="difficultySlider" type="range" min="0" max="5" value="0">
+            </form>
+            <span class="addressLabel">Address:</span>
+            <span class="address" id="trueAddress">_</span>
+            <span class="addressLabel">Guess:</span>
+            <span class="address" id="guessedAddress" >_</span>
+            <button class="menuButton" id="generate">Generate</button>
+          </div>
+          <button class="menuButton gameBegin" id="play">Play</button>
+        </div>
+      </div>
+    </div>
+    <div id="map"></div>
+    <p id="debug">_</p>
+  </body>
+</html>
