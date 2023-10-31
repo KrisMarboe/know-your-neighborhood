@@ -1,5 +1,5 @@
 import './style.css';
-import imgUrl from './distanceInfoBox.png'
+import imageUrl from './distanceInfoBox.png'
 import { Map, View } from 'ol';
 import { Draw, Modify, Snap } from 'ol/interaction.js';
 import { createBox } from 'ol/interaction/Draw.js';
