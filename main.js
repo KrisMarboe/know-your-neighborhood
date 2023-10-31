@@ -1,4 +1,5 @@
 import './style.css';
+import imgUrl from './distanceInfoBox.png'
 import { Map, View } from 'ol';
 import { Draw, Modify, Snap } from 'ol/interaction.js';
 import { createBox } from 'ol/interaction/Draw.js';
@@ -276,7 +277,7 @@ const distanceInfoStyle = function(distance) {
       anchor: [0.5, 90],
       anchorXUnits: 'fraction',
       anchorYUnits: 'pixels',
-      src: 'distanceInfoBox.png',
+      src: imageUrl,
       scale: 0.7
     }),
     text: new Text({
