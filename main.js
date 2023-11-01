@@ -11,8 +11,7 @@ import { Vector as VectorLayer } from 'ol/layer.js';
 import { transform, fromLonLat, transformExtent } from 'ol/proj';
 import { Style, Fill, Stroke, Icon, Text } from 'ol/style';
 import { apply as olms_apply } from 'ol-mapbox-style';
-import { getDistance } from 'ol/sphere';
-// import { streets as streetData } from "./street_data.json"
+import { getDistance, } from 'ol/sphere';
 
 // ================ Utility stuff =================//
 const getCenterOfStreet = function (streetFeature) {
