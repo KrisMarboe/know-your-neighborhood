@@ -1,9 +1,20 @@
 @import "node_modules/ol/ol.css";
 
 html, body {
+  background-color: #ffffff;
+  color: #ffffff;
   margin: 0;
   height: 100%;
+  display: flex;
+  overflow-x: hidden;
+  /* VARIABLES */
+  --main-nav-width: 3.4rem;
+  --side-bar-width: 26.6rem;
   /* COLORS */
+  --primary-color: #4E555F;
+  --secondary-color: #6D7888;
+  --tertiary-color: #A8B2C2;
+  --quaternary-color: #4B5E90;
   --blue-dark-color: #1d3557;
   --blue-shadow-color: #36607B;
   --blue-mid-color: #457b9d;
@@ -17,7 +28,6 @@ html, body {
   --red-mid-color: #9C4444;
   --red-bright-color: #DBA7A7;
   --font-color: #f1faee;
-  background-color: #ffffff;
   --correct-color: #46E637;
   --incorrect-color: #E63946;
 }
@@ -26,15 +36,8 @@ html, body {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: calc(var(--main-nav-width) + var(--side-bar-width));
   right: 0;
-  left: 30vw;
-  max-width: 70vw;
-}
-
-h1 {
-  color: var(--font-color);
-  margin-top: 3rem;
-  margin-bottom: 4rem;
 }
 
 span {
@@ -49,42 +52,195 @@ label {
   cursor: default;
 }
 
-#sidebar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 70vw;
-  left: 0;
+/* ---------- Navigation bar ---------- */
+#main-navigation-bar {
+  min-height: 20rem;
   height: 100%;
-  background-color: var(--blue-dark-color);
+  min-width: var(--main-nav-width);
+  max-width: var(--main-nav-width);
+  background-color: var(--primary-color);
   text-align: center;
-}
-
-.navigationBar {
   overflow: hidden;
-  border-bottom: 0.2rem solid var(--blue-mid-color);
-  margin-bottom: 2rem;
 }
 
-.navigationBar span {
-  float: left;
-  color: var(--font-color);
-  text-align: center;
-  padding: 0.8rem 0;
-  width: 15vw;
-  font-size: 1rem;
+.icon-button {
+  background-color: transparent;
+  border-radius: 20%;
+  padding: 0.1rem;
+  margin-top: 0.1rem;
+  margin-bottom: 0.1rem;
+  max-width: calc(var(--main-nav-width) - 0.8rem);
+  max-height: calc(var(--main-nav-width) - 0.8rem);
+}
+
+.icon-button:hover {
+  background-color: var(--tertiary-color);
   cursor: pointer;
 }
 
-.navigationBar span:hover {
-  background-color: var(--blue-bright-color);
-  color: var(--font-color);
+.main-active {
+  background-color: var(--tertiary-color);
 }
 
-.navigationBar span.active {
-  background-color: var(--blue-mid-color);
-  color: var(--font-color);
+.main-active:hover {
   cursor: default;
+}
+
+
+.main-navigation-link-item {
+  margin-top: 0.1rem;
+  margin-bottom: 0.1rem;
+  max-width: calc(var(--main-nav-width) - 0.8rem);
+  max-height: calc(var(--main-nav-width) - 0.8rem);
+}
+
+/* ---------- Home Section ---------- */
+#home-section {
+  text-align: center;
+  background-color: var(--secondary-color);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--main-nav-width);
+  right: 0;
+}
+
+/* ---------- Side Bar ---------- */
+#sidebar {
+  height: 100%;
+  width: var(--side-bar-width);
+  background-color: var(--secondary-color);
+  text-align: center;
+}
+
+#sidebar h1 {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.sidebar-section {
+  display: none;
+}
+
+/* ---------- Info Contaier ---------- */
+.info-container-wrapper {
+  overflow-y: scroll;
+}
+
+.info-container {
+  background-color: var(--primary-color);
+  text-align: center;
+  width: 90%;
+  margin: 1rem auto;
+}
+.info-container h2 {
+  background-color: var(--quaternary-color);
+  padding: 0.1rem 0;
+  margin: 0;
+}
+
+.info-container div {
+  padding: 1rem 2rem;
+}
+
+/* ---------- Side Bar Buttons ---------- */
+.sidebar-button {
+  display: inline-block;
+  width: 90%;
+  padding: 0.5rem 0;
+  font-size: 24px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+  color: var(--font-color);
+  background-color: var(--blue-mid-color);
+  border: none;
+  box-shadow: 0 9px var(--blue-shadow-color);
+  margin-bottom: 2rem;
+}
+
+.sidebar-button:hover {
+  background-color: var(--blue-bright-color)
+}
+
+.sidebar-button:active {
+  background-color: var(--blue-mid-color);
+  box-shadow: 0 5px var(--blue-shadow-color);
+  transform: translateY(4px);
+}
+
+.sidebar-button:disabled {
+  color: var(--blue-dark-color);
+  background-color: var(--blue-bright-color);
+  border: none;
+  box-shadow: 0 9px var(--blue-shadow-color);
+}
+
+.progress {
+  color: var(--font-color);
+  background-color: var(--green-mid-color);
+  box-shadow: 0 9px var(--green-shadow-color);
+}
+
+.progress:hover {
+  background-color: var(--green-bright-color)
+}
+
+.progress:active {
+  background-color: var(--green-mid-color);
+  box-shadow: 0 5px var(--green-shadow-color);
+}
+
+.progress:disabled {
+  color: var(--green-dark-color);
+  background-color: var(--green-bright-color);
+  box-shadow: 0 9px var(--green-shadow-color);
+}
+
+.end {
+  color: var(--font-color);
+  background-color: var(--red-mid-color);
+  box-shadow: 0 9px var(--red-shadow-color);
+}
+
+.end:hover {
+  background-color: var(--red-bright-color)
+}
+
+.end:active {
+  background-color: var(--red-mid-color);
+  box-shadow: 0 5px var(--red-shadow-color);
+}
+
+.end:disabled {
+  color: var(--red-dark-color);
+  background-color: var(--red-bright-color);
+  box-shadow: 0 9px var(--red-shadow-color);
+}
+
+/* ---------- Game Containers ---------- */
+.game-section {
+  height: 100%;
+  width: calc(var(--side-bar-width) + var(--main-nav-width));
+  background-color: var(--secondary-color);
+  text-align: center;
+}
+
+.game-button-container {
+  padding: 10%;
+}
+
+.game-button {
+  width: 30%;
+}
+
+.game-backward {
+  float: left;
+}
+
+.game-forward {
+  float: right;
 }
 
 .addressLabel {
@@ -107,112 +263,6 @@ label {
   margin-bottom: 1rem;
 }
 
-#guessedAddress {
-  margin-bottom: 3rem;
-}
-
-#difficultyForm {
-  margin: 0 1rem 2rem 1rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  background-color: var(--blue-mid-color);
-}
-
-#difficultySlider {
-  width: 20vw;
-}
-
-.difficulty {
-  display: inline-block;
-  font-size: large;
-  color: var(--font-color);
-  padding: 0.2rem 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.menuButton {
-  display: inline-block;
-  padding: 15px 25px;
-  font-size: 24px;
-  cursor: pointer;
-  text-align: center;
-  text-decoration: none;
-  outline: none;
-  color: var(--font-color);
-  background-color: var(--blue-mid-color);
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 9px var(--blue-shadow-color);
-  margin-bottom: 2rem;
-}
-
-.menuButton:hover {
-  background-color: var(--blue-bright-color)
-}
-
-.menuButton:active {
-  background-color: var(--blue-mid-color);
-  box-shadow: 0 5px var(--blue-shadow-color);
-  transform: translateY(4px);
-}
-
-.menuButton:disabled {
-  color: var(--blue-dark-color);
-  background-color: var(--blue-bright-color);
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 9px var(--blue-shadow-color);
-}
-
-#play {
-  position: absolute;
-  bottom: 1rem;
-  left: 11vw;
-  width: 6rem;
-}
-
-.gameBegin {
-  color: var(--font-color);
-  background-color: var(--green-mid-color);
-  box-shadow: 0 9px var(--green-shadow-color);
-}
-
-.gameBegin:hover {
-  background-color: var(--green-bright-color)
-}
-
-.gameBegin:active {
-  background-color: var(--green-mid-color);
-  box-shadow: 0 5px var(--green-shadow-color);
-}
-
-.gameBegin:disabled {
-  color: var(--green-dark-color);
-  background-color: var(--green-bright-color);
-  box-shadow: 0 9px var(--green-shadow-color);
-}
-
-.gameEnd {
-  color: var(--font-color);
-  background-color: var(--red-mid-color);
-  box-shadow: 0 9px var(--red-shadow-color);
-}
-
-.gameEnd:hover {
-  background-color: var(--red-bright-color)
-}
-
-.gameEnd:active {
-  background-color: var(--red-mid-color);
-  box-shadow: 0 5px var(--red-shadow-color);
-}
-
-.gameEnd:disabled {
-  color: var(--red-dark-color);
-  background-color: var(--red-bright-color);
-  box-shadow: 0 9px var(--red-shadow-color);
-}
-
 #debug {
   position: absolute;
   top: 0;
@@ -221,4 +271,55 @@ label {
   right: 0;
   background-color: white;
   color: black;
+}
+
+/* ---------- Summary ---------- */
+.game-counter {
+  display: inline-block;
+  width: 30%;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.summary-counter {
+  display: inline-block;
+  width: 45%;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.counter-iter {
+  background-color: var(--secondary-color);
+}
+
+.counter-correct {
+  background-color: var(--green-mid-color);
+}
+
+.counter-incorrect {
+  background-color: var(--red-mid-color);
+}
+
+/* ---------- Game Length container ---------- */
+#game-length-form {
+  --form-margin: 10rem;
+  background-color: var(--secondary-color);
+  position: absolute;
+  text-align: center;
+  top: var(--form-margin);
+  bottom: var(--form-margin);
+  right: var(--form-margin);
+  left: calc(var(--main-nav-width) + var(--side-bar-width) + var(--form-margin))
+}
+
+#game-length-slider {
+  width: 100%;
+}
+
+.game-length {
+  display: inline-block;
+  font-size: large;
+  color: var(--font-color);
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 1rem;
 }

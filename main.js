@@ -1,5 +1,7 @@
 import './style.css';
-import imageUrl from './distanceInfoBox.png'
+import boxImageUrl from './static/images/distanceInfoBox.png'
+import pinImageUrl from './static/images/pin.png'
+import createColormap from 'colormap';
 import { Map, View } from 'ol';
 import { Draw, Modify, Snap } from 'ol/interaction.js';
 import { createBox } from 'ol/interaction/Draw.js';
@@ -12,8 +14,13 @@ import { transform, fromLonLat, transformExtent } from 'ol/proj';
 import { Style, Fill, Stroke, Icon, Text } from 'ol/style';
 import { apply as olms_apply } from 'ol-mapbox-style';
 import { getDistance, } from 'ol/sphere';
+import { Circle } from 'ol/geom';
 
 // ================ Utility stuff =================//
+function getImageUrl(name, ext) {
+  return new URL(`./static/images/${name}.${ext}`, import.meta.url).href
+}
+
 const getCenterOfStreet = function (streetFeature) {
   const streetGeometry = streetFeature.getGeometry();
   return streetGeometry.getClosestPoint(getCenter(streetGeometry.getExtent()));
@@ -31,7 +38,7 @@ const getRealDistance = function (line) {
     dist += getDistance(t1, t2);
   }
   // get distance on sphere
-  return formatLength(dist);
+  return dist;
 }
 
 const formatLength = function (length) {
@@ -44,13 +51,105 @@ const formatLength = function (length) {
   return output;
 };
 
+function shuffle(array) {
+  let currentIndex = array.length,  randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex > 0) {
+
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+}
+
+const zoomToExtent = function (extent, _duration) {
+  map.getView().fit(extent, { duration: _duration });
+}
+
+const weightSum = function(object) {
+  let sum = 0;
+  object.forEach((element) => {
+    sum += element.weight;
+  })
+  return sum
+}
+
+// Sampling from custom discrete distribution
+const weightedChoice = function(array) {
+  const target = Math.random() * weightSum(array);
+  let runningValue = 0;
+  let newValue;
+  for (let i=0; i<array.length; i++) {
+    if (array[i].weight > 0) {
+      newValue = runningValue + array[i].weight;
+      if (target <= newValue) return i;
+      runningValue = newValue;
+    }
+  }
+  return array.length - 1
+};
+
+const sampleWithReplacement = function(array, exclusives) {
+  let choice = weightedChoice(array);
+  while (exclusives.includes(array[choice])) {
+    choice = weightedChoice(array);
+  }
+  return array[choice];
+}
+
+
+const sampleWithoutReplacement = function(array, n) {
+  samples = new Array();
+  sampleWithoutReplacement_(array, n-1);
+}
+
+const sampleWithoutReplacement_ = function(array, n) {
+  let sampledIndex = weightedChoice(array);
+  samples.push(array[sampledIndex]);
+  array[sampledIndex].weight = 0;
+  if (n > 0) {
+    sampleWithoutReplacement_(array, n-1);
+  }
+}
+
 //================= Data stuff =================//
 // Load street data
-let streetsByLength = new Array();
+let streetArray = new Array();
+let longestStreetLength;
+
+const calculateStreetArray = function() {
+  streetArray = new Array();
+  longestStreetLength = 0;
+  // DO STUFF HERE
+  streetSource.getFeatures().forEach((feat, i) => {
+    let streetLength = 0;
+    let lStrings = feat.getGeometry().getLineStrings();
+    for (var k=0; k < lStrings.length; k++) {
+      streetLength += lStrings[k].getLength();
+    }
+    longestStreetLength = (longestStreetLength < streetLength) ? streetLength : longestStreetLength;
+    streetArray.push({"name": feat.values_.name, "length": streetLength, "weight": streetLength})
+  })
+
+
+  // Sort streets by length in descending order
+  streetArray.sort(function (a, b) {
+    if (a.weight > b.weight) {
+      return -1;
+    } else if (a.weight < b.weight) {
+      return 1;
+    }
+    return 0;
+  });
+}
 
 const loadStreets = function (streetsJSON) {
   const boundaryGeometry = boundarySource.getFeatureById("boundary").getGeometry();
-  streetsByLength = new Array();
   streetsJSON.elements.forEach((street, s) => {
     const geometryCoordinates = new Array();
     let isInsideBoundary = false;
@@ -73,39 +172,26 @@ const loadStreets = function (streetsJSON) {
     } else {
       feat.getGeometry().appendLineString(new LineString(geometryCoordinates))
     }
-
-  })
-
-  // DO STUFF HERE
-  streetSource.getFeatures().forEach((feat, i) => {
-    let streetLength = 0;
-    let lStrings = feat.getGeometry().getLineStrings();
-    for (var k=0; k < lStrings.length; k++) {
-      streetLength += lStrings[k].getLength();
-    }
-    streetsByLength.push({"name": feat.values_.name, "length": streetLength})
-  })
-
-  setDifficulties(streetsByLength.length);
-
-  // Sort streets by length in descending order
-  streetsByLength.sort(function (a, b) {
-    if (a.length > b.length) {
-      return -1;
-    } else if (a.length < b.length) {
-      return 1;
-    }
-    return 0;
   });
+  streetDataHasBeenLoaded = true;
+
+  setDifficulties(streetSource.getFeatures().length);
 }
 
 const clearStreets = function () {
+  streetDataHasBeenLoaded = false;
   streetSource.clear();
-  map.removeLayer(streetLayer);
+  streetArray = null;
 }
 
 //================= Map stuff =================//
 // The area
+let colormap = createColormap({
+  colormap: 'jet',
+  nshades: 10,
+  format: 'hex',
+  alpha: 1
+})
 let boundaryColor = "#5A02A7";
 let boundaryWidth = 2;
 document.getElementById("boundaryWidth").value = boundaryWidth;
@@ -138,9 +224,12 @@ const boundaryLayer = new VectorLayer({
   source: boundarySource,
 });
 
-let draw; // global so we can remove it later
-let snap; // global so we can remove it later
-let modify; // global so we can remove it later
+// global so we can remove it later
+let draw; 
+let snap;
+let modify;
+let pin;
+let pinFeature;
 function addInteractions() {
   let value = typeSelect.value;
   if (value !== 'None') {
@@ -149,25 +238,44 @@ function addInteractions() {
         source: boundarySource,
         type: 'Circle',
         geometryFunction: createBox(),
+        condition: (e) => e.originalEvent.buttons === 1
       });
     } else {
       draw = new Draw({
         source: boundarySource,
         type: value,
+        condition: (evt) => evt.originalEvent.buttons === 1
       });
     }
     draw.on('drawstart', function() {
-      boundarySource.clear();
+      boundarySource.removeFeature(boundarySource.getFeatureById("boundary"));
+      clearStreets();
     }, this);
-    draw.on('drawend', function(evt) {
+    draw.on('drawend', function (evt) {
       evt.feature.setId("boundary");
-      evt.feature.setStyle(boundaryStyle);
     }, this);
     snap = new Snap({source: boundarySource});
     modify = new Modify({source: boundarySource});
+    modify.on('modifyend', function () {
+      clearStreets();
+    });
+    pin = new Draw({
+      source: boundarySource,
+      type: "Point",
+      condition: (e) => e.originalEvent.buttons === 2
+    });
+    pin.on('drawstart', function(evt) {
+      boundarySource.removeFeature(pinFeature);
+    }, this);
+    pin.on('drawend', function (evt) {
+      pinFeature = evt.feature
+      pinFeature.setId("pin");
+      pinFeature.setStyle(pinStyle);
+    }, this);
     map.addInteraction(draw);
     map.addInteraction(modify);
     map.addInteraction(snap);
+    map.addInteraction(pin);
   }
 }
 
@@ -175,6 +283,7 @@ function removeInteractions() {
   map.removeInteraction(snap);
   map.removeInteraction(modify);
   map.removeInteraction(draw);
+  map.removeInteraction(pin);
 }
 
 
@@ -191,12 +300,22 @@ const map = new Map({
     minZoom: 1
   })
 });
-olms_apply(map, styleJson).then(function () {map.addLayer(boundaryLayer);});
+olms_apply(map, styleJson).then(function () {
+  map.addLayer(boundaryLayer);
+  const initialBoundary = new Feature({
+    geometry: new Circle(center, 2000)
+  });
+  initialBoundary.setId("boundary");
+  boundarySource.addFeature(initialBoundary)
+  map.addLayer(streetLayer);
+  map.addLayer(labelLayer);
+});
 
 
 // The street styles
 let trueStreetColor = "#38B000";
 let hoveredStreetColor = "#B32100";
+let selectedStreetColor = "#fb8500";
 let streetBorderOpacity = 30;
 document.getElementById("borderOpacityValue").innerHTML = streetBorderOpacity;
 document.getElementById("borderOpacity").value = streetBorderOpacity;
@@ -228,12 +347,13 @@ const inactiveStreetStyle = [
 ]
 
 const hoveredStreetStyle = function(feature, resolution) {
+  // TODO
   return new Style({
     stroke: new Stroke({ color: hoveredStreetColor, width: Math.max(2, 10/resolution) })
   })
 }
 
-const guessedStreetStyle = function(feature, resolution) {
+const incorrectStreetStyle = function(feature, resolution) {
   return [
     new Style({
       stroke: new Stroke({ color: hoveredStreetColor, width: Math.max(2, 10/resolution) }),
@@ -246,7 +366,20 @@ const guessedStreetStyle = function(feature, resolution) {
   ]
 };
 
-const trueStreetStyle = function(feature, resolution) {
+const selectedStreetStyle = function(feature, resolution) {
+  return [
+    new Style({
+      stroke: new Stroke({ color: selectedStreetColor, width: Math.max(2, 10/resolution) }),
+      zIndex: 2
+    }),
+    new Style({
+      stroke: new Stroke({ color: `${selectedStreetColor}${streetBorderOpacity}`, width: Math.max(40, 200/resolution) }),
+      zIndex: 1
+    })
+  ]
+};
+
+const correctStreetStyle = function(feature, resolution) {
   return [
     new Style({
       stroke: new Stroke({ color: trueStreetColor, width: Math.max(2, 10/resolution) }),
@@ -257,6 +390,20 @@ const trueStreetStyle = function(feature, resolution) {
       zIndex: 1
     })
   ]
+};
+
+const correctGuessStyle = function(feature, resolution) {
+  return new Style({
+    stroke: new Stroke({ color: trueStreetColor, width: Math.max(2, 10/resolution) }),
+    zIndex: 2
+  })
+};
+
+const incorrectGuessStyle = function(feature, resolution) {
+  return new Style({
+    stroke: new Stroke({ color: hoveredStreetColor, width: Math.max(2, 10/resolution) }),
+    zIndex: 2
+  })
 };
 
 const errorStyle = function(feature, resolution) {
@@ -271,26 +418,76 @@ const errorStyle = function(feature, resolution) {
 };
 
 const distanceInfoStyle = function(distance) {
-  return new Style({
-     image: new Icon({
-      anchor: [0.5, 90],
-      anchorXUnits: 'fraction',
-      anchorYUnits: 'pixels',
-      src: imageUrl,
-      scale: 0.7
-    }),
-    text: new Text({
-      textAlign: 'center',
-      text: distance,
-      fill: new Fill({color: "black"}),
-      stroke: new Stroke({color: "black"}),
-      font: "bold 20px Arial, Verdana, Courier New",
-      offsetY: -50*0.7,
-      scale: 0.7
-    }),
-    zIndex: 3
-  });
-}
+  return function (feature) {
+    return new Style({
+      image: new Icon({
+        anchor: [0.5, 90],
+        anchorXUnits: 'fraction',
+        anchorYUnits: 'pixels',
+        src: boxImageUrl,
+        scale: 0.5
+      }),
+      text: new Text({
+        textAlign: 'center',
+        text: distance,
+        fill: new Fill({color: "black"}),
+        stroke: new Stroke({color: "black"}),
+        font: "bold 20px Arial, Verdana, Courier New",
+        offsetY: -50*0.5,
+        scale: 0.5
+      }),
+      zIndex: feature.zIndex+5
+    });
+  };
+};
+
+const selectSummaryInfoStyle = function(distance, name) {
+  return function (feature) {
+    return [
+      new Style({
+        image: new Icon({
+          anchor: [0.5, 90],
+          anchorXUnits: 'fraction',
+          anchorYUnits: 'pixels',
+          src: boxImageUrl,
+          scale: 0.5
+        }),
+        text: new Text({
+          textAlign: 'center',
+          text: distance,
+          fill: new Fill({color: "black"}),
+          stroke: new Stroke({color: "black"}),
+          font: "bold 20px Arial, Verdana, Courier New",
+          offsetY: -50*0.65,
+          scale: 0.5
+        }),
+        zIndex: feature.zIndex+5
+      }),
+      new Style({
+        text: new Text({
+          textAlign: 'center',
+          text: name,
+          fill: new Fill({color: "black"}),
+          stroke: new Stroke({color: "black"}),
+          font: "bold 20px Arial, Verdana, Courier New",
+          offsetY: -50*0.35,
+          scale: 0.3
+        }),
+        zIndex: feature.zIndex+5
+      }),
+    ]
+  };
+};
+
+const pinStyle = new Style({
+  image: new Icon({
+    anchor: [0.5, 512],
+    anchorXUnits: 'fraction',
+    anchorYUnits: 'pixels',
+    src: pinImageUrl,
+    scale: 0.05
+  })
+});
 
 const streetSource = new VectorSource({wrapX: false});
 const streetLayer = new VectorLayer({
@@ -298,48 +495,158 @@ const streetLayer = new VectorLayer({
   style: inactiveStreetStyle
 });
 
+const labelSource = new VectorSource({wrapX: false});
+const labelLayer = new VectorLayer({
+  source: labelSource,
+  style: undefined
+});
+
+
 let hoveredFeature = null;
 let selectedFeature = null;
+let trueFeature = null;
 let errorLine = null;
 let distanceInfoBox = null;
-map.on('pointermove', function (e) {
-  if (!isSearching) return; 
+let streetDataHasBeenLoaded = false;
+map.on('pointermove', function (evt) {
+  if (!isSearching) return;
   if (hoveredFeature !== null) {
     hoveredFeature.setStyle(undefined);
     hoveredFeature = null;
   }
-  hoveredFeature = streetSource.getClosestFeatureToCoordinate(e.coordinate);
+  hoveredFeature = streetSource.getClosestFeatureToCoordinate(evt.coordinate);
+  if (hoveredFeature === selectedFeature) {
+    hoveredFeature = null;
+    return;
+  }
   if (hoveredFeature) {
     hoveredFeature.setStyle(hoveredStreetStyle)
-    document.getElementById("debug").innerHTML = hoveredFeature.values_.kind // UNCOMMENT TO DEBUG SOMETHING ABOUT STREETS
+    //document.getElementById("debug").innerHTML = hoveredFeature.values_.kind // UNCOMMENT TO DEBUG SOMETHING ABOUT STREETS
   }
 });
 
-map.getViewport().addEventListener('mouseout', function (e) {
+map.getViewport().addEventListener('mouseout', function () {
   if (hoveredFeature !== null) {
     hoveredFeature.setStyle(undefined);
     hoveredFeature = null;
   }
 });
 
-map.addEventListener("click", function (e) {
+map.addEventListener("click", function () {
   if (!isSearching) return;
   if (hoveredFeature === null) return;
+  if (selectedFeature !== null) {
+    selectedFeature.setStyle(undefined);
+  }
   selectedFeature = hoveredFeature;
+  selectedFeature.setStyle(selectedStreetStyle)
   hoveredFeature = null;
-  isSearching = false;
-  generateButton.disabled = false;
-  guessedStreet = selectedFeature.values_.name
-  selectedFeature.setStyle(guessedStreetStyle)
-  const trueFeature = streetSource.getFeatureById(trueStreet.toLowerCase());
-  trueFeature.setStyle(trueStreetStyle);
-  guessedAddress.innerHTML = guessedStreet
-  let borderColor;
-  if (guessedAddress.innerHTML === trueAddress.innerHTML) {
-    borderColor = correctColor;
+})
+
+//================= Menu stuff =================//
+// Load all static images
+document.querySelectorAll(".icon-button").forEach(function (element) {
+  element.src = getImageUrl(element.id, "png");
+})
+document.getElementById("github").src = getImageUrl("github", "png");
+document.getElementById("linkedin").src = getImageUrl("linkedin", "png");
+
+// Main Navigation Bar
+const changeMainSection = function(evt) {
+  let element = evt.currentTarget;
+  if (element.classList.contains("main-active")) return;
+  const sidebar = document.getElementById("sidebar")
+  const mapDiv = document.getElementById("map")
+
+  // Remove/Add interactions if boundary section
+  let currentBoundary = boundarySource.getFeatures()[0];
+  if (element.id === "boundary") {
+    addInteractions();
+    if (currentBoundary !== undefined) currentBoundary.setStyle(undefined);
   } else {
-    borderColor = incorrectColor;
+    removeInteractions();
+    if (currentBoundary !== undefined) currentBoundary.setStyle(boundaryStyle);
+  }
+
+  // Stop initialising game
+  cancelGameStart();
+
+  // Display correct section
+  if (element.id === "home") {
+    sidebar.style.display = "none";
+    mapDiv.style.visibility = "hidden";
+  } else {
+    sidebar.style.display = "block";
+    mapDiv.style.visibility = "visible";
+    document.getElementById("home-section").style.display = "none";
+  }
+  const mainNavigationItems = document.getElementById("main-navigation-bar-section-items").children;
+  for (var i=0; i < mainNavigationItems.length; i++) {
+    if (mainNavigationItems[i].classList.contains("main-active")) {
+      mainNavigationItems[i].classList.remove("main-active");
+      document.getElementById(`${mainNavigationItems[i].id}-section`).style.display = "none";
+    }
+  };
+  let activeSection = document.getElementById(`${element.id}-section`);
+  element.classList.add("main-active")
+  activeSection.style.display = "block";
+}
+const mainNavBarItems = document.getElementById("main-navigation-bar-section-items").childNodes;
+for (let i=0; i < mainNavBarItems.length; i++) {
+  mainNavBarItems[i].addEventListener("click", changeMainSection);
+}
+
+//================= Game page stuff =================//
+// START GAME
+let gameMode = null;
+let gameContainerId = null;
+let zoomSpeed = 100;
+
+const gameStep = function () {
+  zoomToExtent(boundarySource.getFeatureById("boundary").getGeometry().getExtent(), zoomSpeed);
+  if (gameHasEnd) {
+    sampledStreet.innerHTML = samples[currentIteration-1].name;
+  } else {
+    const choice = sampleWithReplacement(streetArray, lastFiveStreets);
+    sampledStreet.innerHTML = choice.name;
+    lastFiveStreets.push(choice);
+    if (lastFiveStreets.length > 5) lastFiveStreets.shift();
+  }
+  currentIterationElement.innerHTML = currentIteration;
+  currentIteration += (gameHasEnd) ? -1 : 1;
+  isSearching = true;
+}
+
+const goToNextStreet = function () {
+  // Reset graphics
+  if (trueFeature !== null) {
+    trueFeature.setStyle(undefined);
+    trueFeature = null;
+  }
+  if (selectedFeature !== null) {
+    selectedFeature.setStyle(undefined);
+    selectedFeature = null;
+  }
+  labelSource.clear()
+}
+
+const evaluteGuess = function () {
+  let realErrorDistance = 0;
+  if (sampledStreet.innerHTML === selectedFeature.values_.name) {
+    correct += 1;
+    correctElement.innerHTML = correct;
+    // Display success information
+    selectedFeature.setStyle(correctStreetStyle);
+    const trueExtent = selectedFeature.getGeometry().getExtent();
+    zoomToExtent(trueExtent, zoomSpeed);
+  } else {
+    incorrect += 1;
+    incorrectElement.innerHTML = incorrect;
+    // Display error information
+    selectedFeature.setStyle(incorrectStreetStyle);
     const selectedCenterCoord = getCenterOfStreet(selectedFeature);
+    trueFeature = streetSource.getFeatureById(sampledStreet.innerHTML.toLowerCase());
+    trueFeature.setStyle(correctStreetStyle);
     const trueCenterCoord = getCenterOfStreet(trueFeature);
     errorLine = new Feature({
       geometry: new LineString([selectedCenterCoord, trueCenterCoord]),
@@ -350,9 +657,14 @@ map.addEventListener("click", function (e) {
     distanceInfoBox = new Feature({
       geometry: new Point(errorLineCenterCoord)
     });
-    streetSource.addFeatures([errorLine, distanceInfoBox]);
+    labelSource.addFeatures([errorLine, distanceInfoBox]);
     errorLine.setStyle(errorStyle);
-    distanceInfoBox.setStyle(distanceInfoStyle(getRealDistance(errorLine.getGeometry())));
+    realErrorDistance = getRealDistance(errorLine.getGeometry());
+    distanceInfoBox.setStyle(distanceInfoStyle(formatLength(realErrorDistance)));
+    // Update error distance
+    accumulatedDistance += realErrorDistance;
+    accumulatedDistanceElement.innerHTML = formatLength(accumulatedDistance);
+    // Zoom to street extend
     const guessedExtent = selectedFeature.getGeometry().getExtent();
     const trueExtent = trueFeature.getGeometry().getExtent();
     const fitExtent = [
@@ -361,169 +673,227 @@ map.addEventListener("click", function (e) {
       Math.max(guessedExtent[2], trueExtent[2]),
       Math.max(guessedExtent[3], trueExtent[3]),
     ]
-    map.getView().fit(fitExtent, { duration: 500 });
-  }
-  guessedAddress.style.border = `0.2rem solid ${borderColor}`;
-})
-
-
-//================= Game stuff =================//
-// Game functions
-const initialiseGame = function() {
-  fetchData();
-  map.addLayer(streetLayer);
-}
-
-const endGame = function() {
-  resetGame();
-  clearStreets();
-}
-
-const resetGame = function() {
-  hoveredFeature = null;
-  selectedFeature = null;
-  isSearching = false;
-  if (trueStreet !== null)
-    streetSource.getFeatureById(trueStreet.toLowerCase()).setStyle(undefined);
-  trueStreet = null;
-  trueAddress.innerHTML = "_";
-  if (guessedStreet !== null)
-    streetSource.getFeatureById(guessedStreet.toLowerCase()).setStyle(undefined);
-  guessedStreet = null;
-  guessedAddress.innerHTML = "_";
-  guessedAddress.style.borderWidth = 0;
-  generateButton.disabled = false;
-}
-
-
-
-
-//================= Menu stuff =================//
-// Navigation Bar
-const changeMenu = function (evt) {
-  let element = evt.currentTarget;
-  if (element.classList.contains("active")) return;
-  let childElements = element.parentNode.children;
-  for (var i=0; i < childElements.length; i++) {
-    if (childElements[i].classList.contains("active")) {
-      childElements[i].classList.remove("active");
-      document.getElementById(childElements[i].innerHTML.toLowerCase()).style.display = "none";
-    }
+    zoomToExtent(fitExtent, zoomSpeed);
   };
-  element.classList.add("active");
-  document.getElementById(element.innerHTML.toLowerCase()).style.display = "block";
-}
-const navBarItems = document.getElementById("navBar").childNodes;
-for (let i=0; i < navBarItems.length; i++) {
-  navBarItems[i].addEventListener("click", changeMenu);
-}
-const navBarShapeItems = document.getElementById("navBarShape").childNodes;
-for (let i=0; i < navBarShapeItems.length; i++) {
-  navBarShapeItems[i].addEventListener("click", changeMenu);
-}
+  guesses.push({
+    name: sampledStreet.innerHTML,
+    distance: realErrorDistance,
+    isCorrect: sampledStreet.innerHTML === selectedFeature.values_.name
+  })
+};
 
-//================= Game page stuff =================//
-// START GAME
-let isPlaying = false;
-const PlayGame = function(evt) {
+const preGameLoad = function(evt) {
   if (boundarySource.getFeatures().length === 0) return;
   let button = evt.target;
-  button.classList.remove(isPlaying ? "gameEnd" : "gameBegin");
-  button.classList.add(isPlaying ? "gameBegin" : "gameEnd");
-  document.getElementById("playDiv").style.display = isPlaying ? "none" : "block";
-  document.getElementById("boundaryDiv").style.display = isPlaying ? "block" : "none";
-  button.innerHTML = isPlaying ? "Play" : "End";
-  if (!isPlaying) {
-    initialiseGame();
-    removeInteractions();
-  } else {
-    endGame();
-    addInteractions();
+  if (!streetDataHasBeenLoaded) {
+    streetSource.clear();
+    fetchData();
   }
-  isPlaying = !isPlaying;
+  gameMode = button.id.split("-")[1];
+  document.getElementById("game-length-form").style.display = "block";
+  button.disabled = true;
 }
-document.getElementById("play").addEventListener("click", PlayGame);
+document.getElementById("play-select").addEventListener("click", preGameLoad);
+document.getElementById("play-name").addEventListener("click", preGameLoad);
+document.getElementById("play-mark").addEventListener("click", preGameLoad);
+
+let summaryFeatures;
+const gameSummary = function () {
+  document.getElementById(gameContainerId).style.display = "none";
+  gameHasEnd = 
+  document.getElementById('summary').style.display = "block";
+  document.getElementById("summary-correct").innerHTML = correct;
+  document.getElementById("summary-incorrect").innerHTML = incorrect;
+  document.getElementById("summary-distance").innerHTML = formatLength(accumulatedDistance);
+  summaryFeatures = new Array();
+  // Draw street guesses
+  for (let i=0; i<guesses.length; i++) {
+    const {name, distance, isCorrect} = guesses[i];
+    let street = streetSource.getFeatureById(name.toLowerCase());
+    street.setStyle((isCorrect) ? correctGuessStyle : incorrectGuessStyle);
+    const streetCenterCoord = getCenterOfStreet(street);
+    distanceInfoBox = new Feature({
+      geometry: new Point(streetCenterCoord)
+    });
+    distanceInfoBox.setStyle(selectSummaryInfoStyle(formatLength(distance), name));
+    summaryFeatures.push(distanceInfoBox);
+    zoomToExtent(boundarySource.getFeatureById("boundary").getGeometry().getExtent(), zoomSpeed);
+  };
+  summaryFeatures.sort(function (a, b) {
+    const aSize = a.getGeometry().getCoordinates()[1];
+    const bSize = b.getGeometry().getCoordinates()[1];
+    if (aSize > bSize) {
+      return -1;
+    } else if (aSize < bSize) {
+      return 1;
+    }
+    return 0;
+  });
+  for (let i=0; i<summaryFeatures.length; i++) {
+    summaryFeatures[i].zIndex = i+10;
+    labelSource.addFeature(summaryFeatures[i]);
+  }
+};
+
+const summaryComplete = function() {
+  document.getElementById("summary").style.display = "none";
+  gameHasEnd = null;
+  labelSource.clear();
+  guesses.forEach(function(element) {
+    streetSource.getFeatureById(element.name.toLowerCase()).setStyle(undefined);
+  })
+}
+
+const summaryRestart = function() {
+  summaryComplete();
+  initialiseGame();
+};
+document.getElementById("summary-restart").addEventListener("click", summaryRestart);
+
+const summaryEnd = function() {
+  summaryComplete();
+  document.getElementById("sidebar").style.display = "block";
+  document.getElementById("main-navigation-bar").style.display = "block";
+};
+document.getElementById("summary-end").addEventListener("click", summaryEnd);
+
+let currentIteration;
+let currentIterationElement;
+let correct;
+let correctElement;
+let incorrect;
+let incorrectElement;
+let accumulatedDistance;
+let accumulatedDistanceElement;
+let guesses;
+let samples;
+let sampledStreet;
+let gameHasEnd;
+let lastFiveStreets;
+const initialiseGame = function () {
+  // Change website to game mode
+  document.getElementById("main-navigation-bar").style.display = "none";
+  document.getElementById("sidebar").style.display = "none";
+  document.getElementById("game-length-form").style.display = "none";
+  gameContainerId = `game-${gameMode}`;
+  document.getElementById(gameContainerId).style.display = "block";
+  document.getElementById(`play-${gameMode}`).disabled = false;
+  // Initialise game variables
+  currentIterationElement = document.getElementById(`${gameMode}-iter`);
+  correctElement = document.getElementById(`${gameMode}-correct`);
+  incorrectElement = document.getElementById(`${gameMode}-incorrect`);
+  accumulatedDistanceElement = document.getElementById(`${gameMode}-distance`);
+  sampledStreet = document.getElementById(`${gameMode}-street`);
+  // Update interface
+  gameHasEnd = gameLengths[gameLengthSlider.value] !== "Free play";
+  currentIteration = (gameHasEnd) ? gameLengths[gameLengthSlider.value] : 1;
+  currentIterationElement.innerHTML = currentIteration;
+  correct = 0;
+  correctElement.innerHTML = correct;
+  incorrect = 0;
+  incorrectElement.innerHTML = incorrect;
+  accumulatedDistance = 0;
+  accumulatedDistanceElement.innerHTML = accumulatedDistance;
+  guesses = new Array();
+  boundarySource.removeFeature(pinFeature);
+  // Sample streets
+  calculateStreetArray();
+  if (!gameHasEnd) {
+    lastFiveStreets = new Array();
+  } else {
+    sampleWithoutReplacement(streetArray, gameLengths[gameLengthSlider.value]);
+    shuffle(samples);
+  }
+  // Start game
+  gameStep();
+}
+document.getElementById("begin-game").addEventListener("click", initialiseGame);
+
+const confirmGuess = function (evt) {
+  if (selectedFeature === null) return;
+  let button = evt.target;
+  if (isSearching) {
+    button.innerHTML = ">>";
+    evaluteGuess();
+    isSearching = false;
+  } else {
+    button.innerHTML = "Confirm";
+    goToNextStreet();
+    if (currentIteration > 0) {
+      gameStep();
+    } else {
+      gameSummary();
+    }
+  };
+};
+document.getElementById("select-confirm").addEventListener("click", confirmGuess);
+const forceEndGame = function () {
+  isSearching = false;
+  goToNextStreet();
+  gameSummary();
+}
+document.getElementById("select-end").addEventListener("click", forceEndGame);
 
 // Difficulty
-let difficulties;
-const difficultyLevel = document.getElementById("difficultyText");
-const difficultySlider = document.getElementById("difficultySlider");
+let gameLengths;
+const gameLengthLevel = document.getElementById("game-length-text");
+const gameLengthSlider = document.getElementById("game-length-slider");
 const setDifficulties = function (streetCount) {
-  let difficulty = 5;
-  difficulties = new Array();
-  while (difficulty < streetCount) {
-    difficulties.push(difficulty);
-    difficulty *= 2;
+  let gameLength = 5;
+  gameLengths = new Array();
+  while (gameLength < streetCount) {
+    gameLengths.push(gameLength);
+    gameLength *= 2;
   }
-  difficulties.push(streetCount);
-  if (difficultySlider.value > difficulties.length - 1) {
-    difficultySlider.value = 0;
+  gameLengths.push(streetCount);
+  gameLengths.push("Free play"); // Free play
+  if (gameLengthSlider.value > gameLengths.length - 1) {
+    gameLengthSlider.value = 0;
   }
-  difficultySlider.max = difficulties.length - 1;
-  difficultyLevel.innerHTML = difficulties[difficultySlider.value];
+  gameLengthSlider.max = gameLengths.length - 1;
+  gameLengthLevel.innerHTML = gameLengths[gameLengthSlider.value];
 }
-difficultySlider.addEventListener('input', function (e) {
-  difficultyLevel.innerHTML = difficulties[e.target.value];
+gameLengthSlider.addEventListener('input', function (e) {
+  gameLengthLevel.innerHTML = gameLengths[e.target.value];
 })
 
+const cancelGameStart = function () {
+  if (gameMode === null) return;
+  document.getElementById("game-length-form").style.display = "none";
+  document.getElementById(`play-${gameMode}`).disabled = false;
+  gameMode = null;
+};
+document.getElementById("close").addEventListener("click", cancelGameStart);
+
 // Address Bar
-let trueAddress = document.getElementById("trueAddress");
-let guessedAddress = document.getElementById("guessedAddress");
 let isSearching = false;
-let trueStreet = null;
-let guessedStreet = null;
 const bodyStyle = getComputedStyle(document.getElementsByTagName("body")[0])
 const correctColor = bodyStyle.getPropertyValue("--correct-color");
 const incorrectColor = bodyStyle.getPropertyValue("--incorrect-color");
 
-// Generate Button
-let generateButton = document.getElementById("generate");
-generateButton.addEventListener('click', () => {
-  if (trueStreet !== null) {
-    streetSource.getFeatureById(trueStreet.toLowerCase()).setStyle(undefined);
-  }
-  if (selectedFeature !== null) {
-    selectedFeature.setStyle(undefined);
-  }
-  if (errorLine !== null) {
-    streetSource.removeFeature(errorLine);
-  }
-  if (distanceInfoBox !== null) {
-    streetSource.removeFeature(distanceInfoBox);
-  }
-  generateButton.disabled = true;
-  isSearching = true;
-  trueStreet = streetsByLength[Math.floor(Math.random() * difficultyLevel.innerHTML)].name;
-  trueAddress.innerHTML = trueStreet;
-  guessedAddress.innerHTML = '_';
-  guessedAddress.style.borderWidth = 0;
-  map.getView().fit(boundarySource.getFeatures()[0].getGeometry().getExtent(), { duration: 200 });
-});
-
 
 //================= Boundary stuff =================//
-const typeSelect = document.getElementById('shapeType');
+const typeSelect = document.getElementById('shape-type');
 typeSelect.onchange = function () {
-  map.removeInteraction(snap);
-  map.removeInteraction(modify);
-  map.removeInteraction(draw);
+  removeInteractions();
   addInteractions();
 };
 
 document.getElementById('undo').addEventListener('click', function () {
   draw.removeLastPoint();
 });
+document.getElementById('remove-pin').addEventListener('click', function () {
+  boundarySource.removeFeature(pinFeature);
+});
 
 const fetchData = async function () {
   let bbox = boundarySource.getFeatureById("boundary").getGeometry().getExtent();
   bbox = transformExtent(bbox, 'EPSG:3857', 'EPSG:4326');
-  var result = await fetch(
+  fetch(
     "https://overpass-api.de/api/interpreter",
     {
         method: "POST",
         // The body contains the query
-        // to understand the query language see "The Programmatic Query Language" on
-        // https://wiki.openstreetmap.org/wiki/Overpass_API#The_Programmatic_Query_Language_(OverpassQL)
         body: "data="+ encodeURIComponent(`
             [out:json]
             [timeout:90]
@@ -542,10 +912,7 @@ const fetchData = async function () {
     },
   ).then(
       (data)=>data.json()
+  ).then(
+    (result) => loadStreets(result)
   )
-  loadStreets(result);
 };
-
-// document.getElementById('save').addEventListener('click', fetchData)
-
-addInteractions();

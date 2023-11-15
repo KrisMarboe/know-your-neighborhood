@@ -8,14 +8,147 @@
     <script type="module" src="./main.js"></script>
   </head>
   <body>
-    <div id="sidebar">
-      <h1>KnowYourNeighborhood</h1>
-      <div id="navBar" class="navigationBar">
-        <span class="active navItem">Game</span>
-        <span class="navItem">Settings</span>
+    <div id="main-navigation-bar">
+      <div id="main-navigation-bar-section-items" style="height: calc(100% - 7rem); min-height: 20rem; padding-top: 1rem;">
+        <img class="icon-button main-navigation-item main-active" id="home">
+        <img class="icon-button main-navigation-item" id="select">
+        <img class="icon-button main-navigation-item" id="name">
+        <img class="icon-button main-navigation-item" id="mark">
+        <img class="icon-button main-navigation-item" id="boundary">
+        <img class="icon-button main-navigation-item" id="settings">
       </div>
-      <div id="pageSections">
-        <div id="settings" style="display: none;">
+      <div>
+        <img class="main-navigation-link-item" id="linkedin">
+        <img class="main-navigation-link-item" id="github">
+      </div>
+    </div>
+    <div id="home-section">
+      <h1>HOME SCREEN</h1>
+    </div>
+    <div id="sidebar" style="display: none;">
+      <div id="page-sections">
+        <!-- SELECT GAME SECTION -->
+        <div id="select-section" class="sidebar-section">
+          <h1>SELECT THE STREET</h1>
+          <div class="info-container-wrapper">
+            <div class="info-container">
+              <h2>Game Info</h2>
+              <div style="text-align: left;">
+                <span>
+                  1. Hover over streets to highlight them.<br>
+                  2. Select the correct street.<br>
+                  3. ...<br>
+                  4. Profit?
+                </span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Map Type</h2>
+              <div>
+                <span>Full, No Labels, No Streets, Only Outline</span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Street Types</h2>
+              <div>
+                <span>Primary, Secondary, Tertiary, Residential, Service, Unclassified, Motorway, Truck, Highway</span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-button progress" id="play-select">Play</button>
+        </div>
+        <!-- NAME GAME SECTION -->
+        <div id="name-section" class="sidebar-section">
+          <h1>NAME SECTION</h1>
+          <div class="info-container-wrapper">
+            <div class="info-container">
+              <h2>Game Info</h2>
+              <div style="text-align: left;">
+                <span>
+                  1. Identify highlighted street.<br>
+                  2. Write name of the highlighted street.<br>
+                  3. ...<br>
+                  4. Profit?
+                </span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Map Type</h2>
+              <div>
+                <span>Full, No Labels, No Streets, Only Outline</span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Street Types</h2>
+              <div>
+                <span>Primary, Secondary, Tertiary, Residential, Service, Unclassified, Motorway, Truck, Highway</span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-button progress" id="play-name">Play</button>
+        </div>
+        <!-- MARK GAME SECTION -->
+        <div id="mark-section" class="sidebar-section">
+          <h1>MARK SECTION</h1>
+          <div class="info-container-wrapper">
+            <div class="info-container">
+              <h2>Game Info</h2>
+              <div style="text-align: left;">
+                <span>
+                  1. Place marker where street is.<br>
+                  2. Select correct location.<br>
+                  3. ...<br>
+                  4. Profit?
+                </span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Map Type</h2>
+              <div>
+                <span>Full, No Labels, No Streets, Only Outline</span>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Street Types</h2>
+              <div>
+                <span>Primary, Secondary, Tertiary, Residential, Service, Unclassified, Motorway, Truck, Highway</span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-button progress" id="play-mark">Play</button>
+        </div>
+        <!-- BOUNDARY SECTION -->
+        <div id="boundary-section" class="sidebar-section">
+          <h1>CREATE BOUNDARY</h1>
+          <div class="info-container-wrapper">
+            <div class="info-container">
+              <h2>Boundary Shape</h2>
+              <div>
+                <select class="type-selector" id="shape-type">
+                  <option value="Circle">Circle</option>
+                  <option value="Box">Box</option>
+                  <option value="Polygon">Polygon</option>
+                </select>
+                <button class="sidebar-button" id="undo">Undo</button>
+                <button class="sidebar-button" id="remove-pin">Remove pin</button>
+              </div>
+            </div>
+            <div class="info-container">
+              <h2>Boundary Info</h2>
+              <div style="text-align: left;">
+                <span>
+                  1. Draw boundary.<br>
+                  2. Modify boundary.<br>
+                  3. ...<br>
+                  4. Profit?
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- SETTINGS SECTION -->
+        <div id="settings-section" class="sidebar-section">
+          <h1>SETTINGS SECTION</h1>
           <h1>Colors</h1>
           <label for="boundaryColor">Boundary:</label>
           <input type="color" id="boundaryColor">
@@ -34,44 +167,84 @@
           <input id="borderOpacity" type="range" min="0" max="100" value="30" step="5">
           <span id="borderOpacityValue"></span>
         </div>
-        <div id="game">
-          <div id="boundaryDiv">
-            <div id="navBarShape" class="navigationBar">
-              <span class="active navItem">Editor</span>
-              <span class="navItem">Browse</span>
-            </div>
-            <div id="browse" style="display: none;">
-              <h1>Not implemented yet.</h1>
-            </div>
-            <div id="editor">
-              <label class="shapeTypeLabel" for="shapeType">Shape type:</label>
-              <select class="typeSelecter" id="shapeType">
-                <option value="Circle">Circle</option>
-                <option value="Box">Box</option>
-                <option value="Polygon">Polygon</option>
-              </select>
-              <br>
-              <button class="menuButton" id="undo">Undo</button>
-              <!-- <button class="menuButton" id="save">Save</button> -->
-            </div>
+      </div>
+    </div>
+    <!-- GAME SECTIONS -->
+    <div id="game-select" class="game-section" style="display: none;">
+      <h1>SELECT GAME</h1>
+      <div class="info-container-wrapper">
+        <div class="info-container">
+          <h2>Progress</h2>
+          <div>
+            <span class="game-counter counter-correct" id="select-correct">?</span>
+            <span class="game-counter counter-iter" id="select-iter">?</span>
+            <span class="game-counter counter-incorrect" id="select-incorrect">?</span>
           </div>
-          <div id="playDiv" style="display: none;">
-            <form id="difficultyForm">
-              <span class="difficulty">Possible Streets:</span><span id="difficultyText" class="difficulty"></span>
-              <br>
-              <input id="difficultySlider" type="range" min="0" max="5" value="0">
-            </form>
-            <span class="addressLabel">Address:</span>
-            <span class="address" id="trueAddress">_</span>
-            <span class="addressLabel">Guess:</span>
-            <span class="address" id="guessedAddress" >_</span>
-            <button class="menuButton" id="generate">Generate</button>
+        </div>
+        <div class="info-container">
+          <h2>Total distance</h2>
+          <div>
+            <span id="select-distance">?</span>
           </div>
-          <button class="menuButton gameBegin" id="play">Play</button>
+        </div>
+        <div class="info-container">
+          <h2>Street</h2>
+          <div>
+            <span id="select-street">???</span>
+          </div>
+        </div>
+        <div class="game-button-container">
+          <button class="game-button game-backward sidebar-button end" id="select-end">End</button>
+          <button class="game-button game-forward sidebar-button progress" id="select-confirm">Confirm</button>
         </div>
       </div>
     </div>
-    <div id="map"></div>
-    <p id="debug">_</p>
+    <div id="game-name" class="game-section" style="display: none;">
+      <h1>NAME GAME</h1>
+    </div>
+    <div id="game-mark" class="game-section" style="display: none;">
+      <h1>MARK GAME</h1>
+    </div>
+    <!-- SUMMARY -->
+    <div id="summary" class="game-section" style="display: none;">
+      <h1>SUMMARY</h1>
+      <div class="info-container-wrapper">
+        <div class="info-container">
+          <h2>Performance</h2>
+          <div>
+            <span class="summary-counter counter-correct" id="summary-correct">?</span>
+            <span class="summary-counter counter-incorrect" id="summary-incorrect">?</span>
+          </div>
+        </div>
+        <div class="info-container">
+          <h2>Total distance</h2>
+          <div>
+            <span id="summary-distance">?</span>
+          </div>
+        </div>
+        <div class="game-button-container">
+          <button class="game-button game-backward sidebar-button end" id="summary-end">End</button>
+          <button class="game-button game-forward sidebar-button progress" id="summary-restart">Play again</button>
+        </div>
+      </div>
+    </div>
+    <!-- MAP -->
+    <div id="map" style="visibility: hidden;"></div>
+    <p id="debug" style="display: block;">_</p>
+    <!-- DIFFICULTY SLIDER OVERLAY -->
+    <div id="game-length-form" style="display: none;">
+      <div style="text-align: right; padding: 0.2rem;">
+        <img class="icon-button" id="close">
+      </div>
+      <div class="info-container">
+        <h2>Difficulty</h2>
+        <div>
+          <span class="game-length">Possible Streets:</span><span id="game-length-text" class="game-length"></span>
+          <br>
+          <input id="game-length-slider" type="range" min="0" max="5" value="0">
+        </div>
+      </div>
+      <button class="sidebar-button progress" id="begin-game">Begin</button>
+    </div>
   </body>
 </html>
