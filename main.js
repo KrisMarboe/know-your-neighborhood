@@ -26,16 +26,20 @@ const getCenterOfStreet = function (streetFeature) {
   return streetGeometry.getClosestPoint(getCenter(streetGeometry.getExtent()));
 }
 
-const getRealDistance = function (line) {
+const getRealDistance = function (p1, p2) {
+  let t1 = transform(p1, 'EPSG:3857', 'EPSG:4326');
+  let t2 = transform(p2, 'EPSG:3857', 'EPSG:4326');
+  // get distance on sphere
+  return getDistance(t1, t2);
+};
+
+const getRealLineDistance = function (line) {
   const coordinates = line.getCoordinates();
 
   var dist = 0;
   //loop through all coordinates
   for(var i = 0; i < coordinates.length -1; i++) {
-    let t1 = transform(coordinates[i], 'EPSG:3857', 'EPSG:4326');
-    let t2 = transform(coordinates[i+1], 'EPSG:3857', 'EPSG:4326');
-    // get distance on sphere
-    dist += getDistance(t1, t2);
+    dist += getRealDistance(coordinates[i], coordinates[i+1])
   }
   // get distance on sphere
   return dist;
@@ -74,7 +78,7 @@ const zoomToExtent = function (extent, _duration) {
 const weightSum = function(object) {
   let sum = 0;
   object.forEach((element) => {
-    sum += element.weight;
+    sum += element.values_.weight;
   })
   return sum
 }
@@ -85,8 +89,8 @@ const weightedChoice = function(array) {
   let runningValue = 0;
   let newValue;
   for (let i=0; i<array.length; i++) {
-    if (array[i].weight > 0) {
-      newValue = runningValue + array[i].weight;
+    if (array[i].values_.weight > 0) {
+      newValue = runningValue + array[i].values_.weight;
       if (target <= newValue) return i;
       runningValue = newValue;
     }
@@ -111,7 +115,7 @@ const sampleWithoutReplacement = function(array, n) {
 const sampleWithoutReplacement_ = function(array, n) {
   let sampledIndex = weightedChoice(array);
   samples.push(array[sampledIndex]);
-  array[sampledIndex].weight = 0;
+  array[sampledIndex].values_.weight = 0;
   if (n > 0) {
     sampleWithoutReplacement_(array, n-1);
   }
@@ -119,23 +123,48 @@ const sampleWithoutReplacement_ = function(array, n) {
 
 //================= Data stuff =================//
 // Load street data
-let streetArray = new Array();
-let longestStreetLength;
+let largestStreetWeight;
 
 const calculateStreetArray = function() {
-  streetArray = new Array();
-  longestStreetLength = 0;
-  // DO STUFF HERE
+  largestStreetWeight = 0;
+  const boundaryExtent = boundaryFeature.getGeometry().getExtent();
+  const t1 = transform([boundaryExtent[1], boundaryExtent[0]], 'EPSG:3857', 'EPSG:4326');
+  const t2 = transform([boundaryExtent[3], boundaryExtent[2]], 'EPSG:3857', 'EPSG:4326');
+  const boundaryDiagonal = getDistance(t1, t2) / 3;
   streetSource.getFeatures().forEach((feat, i) => {
     let streetLength = 0;
     let lStrings = feat.getGeometry().getLineStrings();
     for (var k=0; k < lStrings.length; k++) {
       streetLength += lStrings[k].getLength();
     }
-    longestStreetLength = (longestStreetLength < streetLength) ? streetLength : longestStreetLength;
-    streetArray.push({"name": feat.values_.name, "length": streetLength, "weight": streetLength})
+    let streetWeight = 1;
+    const selectedSamplingStrategy = document.querySelector('input[name="sampling-possibilities"]:checked');
+    let streetPoint;
+    if (selectedSamplingStrategy) {
+      switch (selectedSamplingStrategy.value) {
+        case 'streets-only':
+          streetWeight = Math.min(streetLength, boundaryDiagonal);
+          break;
+        case 'streets-and-pin':
+          streetPoint = feat.getGeometry().getClosestPoint(pinCoordinate);
+          streetWeight = (Math.min(streetLength, boundaryDiagonal) + Math.max(boundaryDiagonal - getRealDistance(streetPoint, pinCoordinate), 0))/2; 
+          break;
+        case 'pin-only':
+          streetPoint = feat.getGeometry().getClosestPoint(pinCoordinate);
+          streetWeight = Math.max(boundaryDiagonal - getRealDistance(streetPoint, pinCoordinate), 0);
+          break;
+        case 'equal-chance':
+          break;
+        default:
+          alert("Something went wrong. All streets have equal probability.")
+          break;
+      }
+    }
+    feat.values_.length = streetLength;
+    feat.values_.weight = streetWeight;
+    largestStreetWeight = (largestStreetWeight < streetWeight) ? streetWeight : largestStreetWeight;
   })
-
+  /*
 
   // Sort streets by length in descending order
   streetArray.sort(function (a, b) {
@@ -146,10 +175,11 @@ const calculateStreetArray = function() {
     }
     return 0;
   });
+  */
 }
 
 const loadStreets = function (streetsJSON) {
-  const boundaryGeometry = boundarySource.getFeatureById("boundary").getGeometry();
+  const boundaryGeometry = boundaryFeature.getGeometry();
   streetsJSON.elements.forEach((street, s) => {
     const geometryCoordinates = new Array();
     let isInsideBoundary = false;
@@ -181,19 +211,19 @@ const loadStreets = function (streetsJSON) {
 const clearStreets = function () {
   streetDataHasBeenLoaded = false;
   streetSource.clear();
-  streetArray = null;
 }
 
 //================= Map stuff =================//
 // The area
 let colormap = createColormap({
-  colormap: 'jet',
+  colormap: 'RdBu',
   nshades: 10,
   format: 'hex',
   alpha: 1
 })
 let boundaryColor = "#5A02A7";
 let boundaryWidth = 2;
+/*
 document.getElementById("boundaryWidth").value = boundaryWidth;
 document.getElementById("boundaryWidthValue").innerHTML = boundaryWidth;
 document.getElementById("boundaryColor").value = boundaryColor;
@@ -206,6 +236,7 @@ document.getElementById("boundaryWidth").addEventListener("change", function (ev
   document.getElementById("boundaryWidthValue").innerHTML = evt.target.value;
   map.updateSize();
 })
+*/
 
 const boundaryStyle = function () {
   return new Style({
@@ -228,8 +259,10 @@ const boundaryLayer = new VectorLayer({
 let draw; 
 let snap;
 let modify;
+let boundaryFeature;
 let pin;
 let pinFeature;
+let pinCoordinate;
 function addInteractions() {
   let value = typeSelect.value;
   if (value !== 'None') {
@@ -248,11 +281,12 @@ function addInteractions() {
       });
     }
     draw.on('drawstart', function() {
-      boundarySource.removeFeature(boundarySource.getFeatureById("boundary"));
+      boundarySource.removeFeature(boundaryFeature);
       clearStreets();
     }, this);
     draw.on('drawend', function (evt) {
       evt.feature.setId("boundary");
+      boundaryFeature = evt.feature;
     }, this);
     snap = new Snap({source: boundarySource});
     modify = new Modify({source: boundarySource});
@@ -269,6 +303,7 @@ function addInteractions() {
     }, this);
     pin.on('drawend', function (evt) {
       pinFeature = evt.feature
+      pinCoordinate = pinFeature.getGeometry().getCoordinates()
       pinFeature.setId("pin");
       pinFeature.setStyle(pinStyle);
     }, this);
@@ -302,11 +337,11 @@ const map = new Map({
 });
 olms_apply(map, styleJson).then(function () {
   map.addLayer(boundaryLayer);
-  const initialBoundary = new Feature({
+  boundaryFeature = new Feature({
     geometry: new Circle(center, 2000)
   });
-  initialBoundary.setId("boundary");
-  boundarySource.addFeature(initialBoundary)
+  boundaryFeature.setId("boundary");
+  boundarySource.addFeature(boundaryFeature)
   map.addLayer(streetLayer);
   map.addLayer(labelLayer);
 });
@@ -317,9 +352,9 @@ let trueStreetColor = "#38B000";
 let hoveredStreetColor = "#B32100";
 let selectedStreetColor = "#fb8500";
 let streetBorderOpacity = 30;
+/*
 document.getElementById("borderOpacityValue").innerHTML = streetBorderOpacity;
 document.getElementById("borderOpacity").value = streetBorderOpacity;
-streetBorderOpacity = Math.round(streetBorderOpacity * (255 / 100)).toString(16);
 document.getElementById("trueColor").value = trueStreetColor;
 document.getElementById("trueColor").addEventListener("change", function (evt) {
   trueStreetColor = evt.target.value;
@@ -335,19 +370,23 @@ document.getElementById("borderOpacity").addEventListener("change", function (ev
   document.getElementById("borderOpacityValue").innerHTML = evt.target.value;
   map.updateSize();
 })
+*/
+streetBorderOpacity = Math.round(streetBorderOpacity * (255 / 100)).toString(16);
 
+/*
+const inactiveStreetStyle = function(feature, resolution) {
+  const colorIndex = Math.round(9 * feature.values_.weight / largestStreetWeight);
+  return new Style({
+    stroke: new Stroke({ color: colormap[colorIndex], width: Math.max(2, 10/resolution) })
+  })
+}
+*/
 
-const inactiveStreetStyle = [
-  new Style({
-    stroke: new Stroke({ color: 'rgba(255, 255, 255, 0)', width: 1 })
-  }),
-  new Style({
-    stroke: new Stroke({ color: 'rgba(255, 255, 255, 0)', width: 1 })
-  }),
-]
+const inactiveStreetStyle = new Style({
+  stroke: new Stroke({ color: "#00000000"})
+})
 
 const hoveredStreetStyle = function(feature, resolution) {
-  // TODO
   return new Style({
     stroke: new Stroke({ color: hoveredStreetColor, width: Math.max(2, 10/resolution) })
   })
@@ -450,7 +489,7 @@ const selectSummaryInfoStyle = function(distance, name) {
           anchorXUnits: 'fraction',
           anchorYUnits: 'pixels',
           src: boxImageUrl,
-          scale: 0.5
+          scale: [Math.max(name.length/12, 0.5), 0.6]
         }),
         text: new Text({
           textAlign: 'center',
@@ -458,8 +497,8 @@ const selectSummaryInfoStyle = function(distance, name) {
           fill: new Fill({color: "black"}),
           stroke: new Stroke({color: "black"}),
           font: "bold 20px Arial, Verdana, Courier New",
-          offsetY: -50*0.65,
-          scale: 0.5
+          offsetY: -50*0.78,
+          scale: 0.7
         }),
         zIndex: feature.zIndex+5
       }),
@@ -470,8 +509,8 @@ const selectSummaryInfoStyle = function(distance, name) {
           fill: new Fill({color: "black"}),
           stroke: new Stroke({color: "black"}),
           font: "bold 20px Arial, Verdana, Courier New",
-          offsetY: -50*0.35,
-          scale: 0.3
+          offsetY: -50*0.48,
+          scale: 0.7
         }),
         zIndex: feature.zIndex+5
       }),
@@ -545,6 +584,8 @@ map.addEventListener("click", function () {
 
 //================= Menu stuff =================//
 // Load all static images
+document.getElementById("home-section").style.backgroundImage = `url(${getImageUrl("city_rug", "jpg")})`;
+document.getElementById("home-section").style.backgroundPosition = "center";
 document.querySelectorAll(".icon-button").forEach(function (element) {
   element.src = getImageUrl(element.id, "png");
 })
@@ -559,13 +600,12 @@ const changeMainSection = function(evt) {
   const mapDiv = document.getElementById("map")
 
   // Remove/Add interactions if boundary section
-  let currentBoundary = boundarySource.getFeatures()[0];
   if (element.id === "boundary") {
     addInteractions();
-    if (currentBoundary !== undefined) currentBoundary.setStyle(undefined);
+    if (boundaryFeature !== undefined) boundaryFeature.setStyle(undefined);
   } else {
     removeInteractions();
-    if (currentBoundary !== undefined) currentBoundary.setStyle(boundaryStyle);
+    if (boundaryFeature !== undefined) boundaryFeature.setStyle(boundaryStyle);
   }
 
   // Stop initialising game
@@ -603,12 +643,12 @@ let gameContainerId = null;
 let zoomSpeed = 100;
 
 const gameStep = function () {
-  zoomToExtent(boundarySource.getFeatureById("boundary").getGeometry().getExtent(), zoomSpeed);
+  zoomToExtent(boundaryFeature.getGeometry().getExtent(), zoomSpeed);
   if (gameHasEnd) {
-    sampledStreet.innerHTML = samples[currentIteration-1].name;
+    sampledStreet.innerHTML = samples[currentIteration-1].values_.name;
   } else {
-    const choice = sampleWithReplacement(streetArray, lastFiveStreets);
-    sampledStreet.innerHTML = choice.name;
+    const choice = sampleWithReplacement(streetSource.getFeatures(), lastFiveStreets);
+    sampledStreet.innerHTML = choice.values_.name;
     lastFiveStreets.push(choice);
     if (lastFiveStreets.length > 5) lastFiveStreets.shift();
   }
@@ -633,6 +673,9 @@ const goToNextStreet = function () {
 const evaluteGuess = function () {
   let realErrorDistance = 0;
   if (sampledStreet.innerHTML === selectedFeature.values_.name) {
+    if (!gameHasEnd) {
+      selectedFeature.values_.weight *= 0.75;
+    }
     correct += 1;
     correctElement.innerHTML = correct;
     // Display success information
@@ -640,6 +683,9 @@ const evaluteGuess = function () {
     const trueExtent = selectedFeature.getGeometry().getExtent();
     zoomToExtent(trueExtent, zoomSpeed);
   } else {
+    if (!gameHasEnd) {
+      selectedFeature.values_.weight *= 1.5;
+    }
     incorrect += 1;
     incorrectElement.innerHTML = incorrect;
     // Display error information
@@ -659,7 +705,7 @@ const evaluteGuess = function () {
     });
     labelSource.addFeatures([errorLine, distanceInfoBox]);
     errorLine.setStyle(errorStyle);
-    realErrorDistance = getRealDistance(errorLine.getGeometry());
+    realErrorDistance = getRealLineDistance(errorLine.getGeometry());
     distanceInfoBox.setStyle(distanceInfoStyle(formatLength(realErrorDistance)));
     // Update error distance
     accumulatedDistance += realErrorDistance;
@@ -694,13 +740,12 @@ const preGameLoad = function(evt) {
   button.disabled = true;
 }
 document.getElementById("play-select").addEventListener("click", preGameLoad);
-document.getElementById("play-name").addEventListener("click", preGameLoad);
-document.getElementById("play-mark").addEventListener("click", preGameLoad);
+// document.getElementById("play-name").addEventListener("click", preGameLoad);  //Uncomment when implemented
+// document.getElementById("play-mark").addEventListener("click", preGameLoad);  //Uncomment when implemented
 
 let summaryFeatures;
 const gameSummary = function () {
   document.getElementById(gameContainerId).style.display = "none";
-  gameHasEnd = 
   document.getElementById('summary').style.display = "block";
   document.getElementById("summary-correct").innerHTML = correct;
   document.getElementById("summary-incorrect").innerHTML = incorrect;
@@ -717,7 +762,7 @@ const gameSummary = function () {
     });
     distanceInfoBox.setStyle(selectSummaryInfoStyle(formatLength(distance), name));
     summaryFeatures.push(distanceInfoBox);
-    zoomToExtent(boundarySource.getFeatureById("boundary").getGeometry().getExtent(), zoomSpeed);
+    zoomToExtent(boundaryFeature.getGeometry().getExtent(), zoomSpeed);
   };
   summaryFeatures.sort(function (a, b) {
     const aSize = a.getGeometry().getCoordinates()[1];
@@ -754,6 +799,9 @@ const summaryEnd = function() {
   summaryComplete();
   document.getElementById("sidebar").style.display = "block";
   document.getElementById("main-navigation-bar").style.display = "block";
+  if (pinFeature) {
+    boundarySource.addFeature(pinFeature);
+  }
 };
 document.getElementById("summary-end").addEventListener("click", summaryEnd);
 
@@ -801,7 +849,7 @@ const initialiseGame = function () {
   if (!gameHasEnd) {
     lastFiveStreets = new Array();
   } else {
-    sampleWithoutReplacement(streetArray, gameLengths[gameLengthSlider.value]);
+    sampleWithoutReplacement(streetSource.getFeatures(), gameLengths[gameLengthSlider.value]);
     shuffle(samples);
   }
   // Start game
@@ -887,7 +935,7 @@ document.getElementById('remove-pin').addEventListener('click', function () {
 });
 
 const fetchData = async function () {
-  let bbox = boundarySource.getFeatureById("boundary").getGeometry().getExtent();
+  let bbox = boundaryFeature.getGeometry().getExtent();
   bbox = transformExtent(bbox, 'EPSG:3857', 'EPSG:4326');
   fetch(
     "https://overpass-api.de/api/interpreter",

@@ -18,12 +18,13 @@
         <img class="icon-button main-navigation-item" id="settings">
       </div>
       <div>
-        <img class="main-navigation-link-item" id="linkedin">
-        <img class="main-navigation-link-item" id="github">
+        <a target="_blank" href="http://vafler.dk/"><img class="main-navigation-link-item" id="linkedin"></a>
+        <a target="_blank" href="https://www.youtube.com/watch?v=AWM5ZNdWlqw"><img class="main-navigation-link-item" id="github"></a>
       </div>
     </div>
     <div id="home-section">
-      <h1>HOME SCREEN</h1>
+      <h1 id="home-title">WELCOME TO KNOW YOUR NEIGHORHOOD</h1>
+      <!--<img class="home-section-background" id="city-rug">-->
     </div>
     <div id="sidebar" style="display: none;">
       <div id="page-sections">
@@ -60,7 +61,10 @@
         <!-- NAME GAME SECTION -->
         <div id="name-section" class="sidebar-section">
           <h1>NAME SECTION</h1>
-          <div class="info-container-wrapper">
+          <span>Coming soon..</span><br>
+          <span>In the distant future..</span><br>
+          <span>Maybe..</span>
+          <!--<div class="info-container-wrapper">
             <div class="info-container">
               <h2>Game Info</h2>
               <div style="text-align: left;">
@@ -85,12 +89,15 @@
               </div>
             </div>
           </div>
-          <button class="sidebar-button progress" id="play-name">Play</button>
+          <button class="sidebar-button progress" id="play-name">Play</button>-->
         </div>
         <!-- MARK GAME SECTION -->
         <div id="mark-section" class="sidebar-section">
           <h1>MARK SECTION</h1>
-          <div class="info-container-wrapper">
+          <span>Coming soon..</span><br>
+          <span>In the distant future..</span><br>
+          <span>Maybe..</span>
+          <!--<div class="info-container-wrapper">
             <div class="info-container">
               <h2>Game Info</h2>
               <div style="text-align: left;">
@@ -115,7 +122,7 @@
               </div>
             </div>
           </div>
-          <button class="sidebar-button progress" id="play-mark">Play</button>
+          <button class="sidebar-button progress" id="play-mark">Play</button>-->
         </div>
         <!-- BOUNDARY SECTION -->
         <div id="boundary-section" class="sidebar-section">
@@ -149,6 +156,8 @@
         <!-- SETTINGS SECTION -->
         <div id="settings-section" class="sidebar-section">
           <h1>SETTINGS SECTION</h1>
+          <span>Cricket noises.</span>
+          <!--
           <h1>Colors</h1>
           <label for="boundaryColor">Boundary:</label>
           <input type="color" id="boundaryColor">
@@ -166,6 +175,7 @@
           <label for="borderOpacity">Border Opacity:</label>
           <input id="borderOpacity" type="range" min="0" max="100" value="30" step="5">
           <span id="borderOpacityValue"></span>
+        -->
         </div>
       </div>
     </div>
@@ -230,18 +240,39 @@
     </div>
     <!-- MAP -->
     <div id="map" style="visibility: hidden;"></div>
-    <p id="debug" style="display: block;">_</p>
+    <p id="debug" style="display: none;">_</p>
     <!-- DIFFICULTY SLIDER OVERLAY -->
     <div id="game-length-form" style="display: none;">
       <div style="text-align: right; padding: 0.2rem;">
         <img class="icon-button" id="close">
       </div>
       <div class="info-container">
-        <h2>Difficulty</h2>
+        <h2>Game Length</h2>
         <div>
           <span class="game-length">Possible Streets:</span><span id="game-length-text" class="game-length"></span>
           <br>
           <input id="game-length-slider" type="range" min="0" max="5" value="0">
+        </div>
+      </div>
+      <div class="info-container">
+        <h2>Sampling Possibilities</h2>
+        <div>
+          <div class="radio-container">
+            <input type="radio" id="streets-only" name="sampling-possibilities" value="streets-only" checked>
+            <label for="streets-only">Streets Only</label>
+          </div>
+          <div class="radio-container">
+            <input type="radio" id="streets-and-pin" name="sampling-possibilities" value="streets-and-pin">
+            <label for="streets-and-pin">Streets And Pin</label>
+          </div>
+          <div class="radio-container">
+            <input type="radio" id="pin-only" name="sampling-possibilities" value="pin-only">
+            <label for="pin-only">Pin Only</label>
+          </div>
+          <div class="radio-container">
+            <input type="radio" id="equal-chance" name="sampling-possibilities" value="equal-chance">
+            <label for="equal-chance">Equal Chance</label>
+          </div>
         </div>
       </div>
       <button class="sidebar-button progress" id="begin-game">Begin</button>

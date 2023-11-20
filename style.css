@@ -12,6 +12,7 @@ html, body {
   --side-bar-width: 26.6rem;
   /* COLORS */
   --primary-color: #4E555F;
+  --primary-alpha-color: #4E555FCC;
   --secondary-color: #6D7888;
   --tertiary-color: #A8B2C2;
   --quaternary-color: #4B5E90;
@@ -103,6 +104,14 @@ label {
   bottom: 0;
   left: var(--main-nav-width);
   right: 0;
+  overflow: hidden;
+}
+
+#home-title {
+  display: inline-block;
+  margin-top: 40vh;
+  background-color: var( --primary-alpha-color);
+  padding: 0.5rem 1rem;
 }
 
 /* ---------- Side Bar ---------- */
@@ -302,7 +311,7 @@ label {
 
 /* ---------- Game Length container ---------- */
 #game-length-form {
-  --form-margin: 10rem;
+  --form-margin: 4rem;
   background-color: var(--secondary-color);
   position: absolute;
   text-align: center;
@@ -322,4 +331,8 @@ label {
   color: var(--font-color);
   padding: 0.2rem 0.5rem;
   margin-bottom: 1rem;
+}
+
+.radio-container {
+  display: inline-block;
 }
