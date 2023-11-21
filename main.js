@@ -542,7 +542,7 @@ const labelLayer = new VectorLayer({
 
 const getClosesFeatureWithinDistance = function(coordinate, dist) {
   const closestFeature = streetSource.getClosestFeatureToCoordinate(coordinate);
-  const pt = closestFeature.getClosestPoint(coordinate);
+  const pt = closestFeature.getGeometry().getClosestPoint(coordinate);
   if (getRealDistance(coordinate, pt) < dist) {
     return closestFeature;
   }
@@ -580,19 +580,20 @@ map.getViewport().addEventListener('mouseout', function () {
   }
 });
 
-map.addEventListener("click", function () {
+map.addEventListener("click", function (evt) {
   if (!isSearching) return;
+  if (selectedFeature !== null) {
+    selectedFeature.setStyle(undefined);
+  }
   if (hoveredFeature !== null) {
     selectedFeature = hoveredFeature;
-    selectedFeature.setStyle(selectedStreetStyle)
     hoveredFeature = null;
   } else {
     selectedFeature = getClosesFeatureWithinDistance(evt.coordinate, 50);
   }
   if (selectedFeature !== null) {
-    selectedFeature.setStyle(undefined);
+    selectedFeature.setStyle(selectedStreetStyle);
   }
-  
 })
 
 //================= Menu stuff =================//
