@@ -540,6 +540,15 @@ const labelLayer = new VectorLayer({
   style: undefined
 });
 
+const getClosesFeatureWithinDistance = function(coordinate, dist) {
+  const closestFeature = streetSource.getClosestFeatureToCoordinate(coordinate);
+  const pt = closestFeature.getClosestPoint(coordinate);
+  if (getRealDistance(coordinate, pt) < dist) {
+    return closestFeature;
+  }
+  return null;
+};
+
 
 let hoveredFeature = null;
 let selectedFeature = null;
@@ -553,7 +562,7 @@ map.on('pointermove', function (evt) {
     hoveredFeature.setStyle(undefined);
     hoveredFeature = null;
   }
-  hoveredFeature = streetSource.getClosestFeatureToCoordinate(evt.coordinate);
+  hoveredFeature = getClosesFeatureWithinDistance(evt.coordinate, 50);
   if (hoveredFeature === selectedFeature) {
     hoveredFeature = null;
     return;
@@ -573,13 +582,17 @@ map.getViewport().addEventListener('mouseout', function () {
 
 map.addEventListener("click", function () {
   if (!isSearching) return;
-  if (hoveredFeature === null) return;
+  if (hoveredFeature !== null) {
+    selectedFeature = hoveredFeature;
+    selectedFeature.setStyle(selectedStreetStyle)
+    hoveredFeature = null;
+  } else {
+    selectedFeature = getClosesFeatureWithinDistance(evt.coordinate, 50);
+  }
   if (selectedFeature !== null) {
     selectedFeature.setStyle(undefined);
   }
-  selectedFeature = hoveredFeature;
-  selectedFeature.setStyle(selectedStreetStyle)
-  hoveredFeature = null;
+  
 })
 
 //================= Menu stuff =================//
